@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "python-quoridor"
+version = "0.1.0"
+description = "python-quoridor is a a quoridor library for python, with move generation, move validation and support for common formats"
+authors = ["Tientjie <tientjieit@gmail.com>"]
+readme = "README.md"
+packages = [{include = "python_quoridor"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
