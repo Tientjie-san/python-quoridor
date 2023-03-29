@@ -2,7 +2,6 @@ import string
 import re
 from copy import deepcopy
 from typing import Dict, List, Set
-from collections import deque
 from dataclasses import dataclass, field
 from exceptions import InvalidMoveError, IllegalPawnMoveError, IllegalWallPlacementError
 
@@ -85,6 +84,17 @@ class Quoridor:
             self._make_wall_move((move))
         self.switch_player()
 
+    def get_pgn(self):
+        ...
+
+    def get_fen(self):
+        ...
+
+    def switch_player(self) -> None:
+        waiting = self.current_player
+        self.current_player = self.waiting_player
+        self.waiting_player = waiting
+
     def _make_pawn_move(self, move: str):
         if move not in self._legal_pawn_moves():
             raise IllegalPawnMoveError()
@@ -133,11 +143,24 @@ class Quoridor:
 
         return set(legal_pawn_moves)
 
-    def _wall_overlaps(self, wall) -> bool:
-        ...
+    def _wall_overlaps(self, wall: str) -> bool:
+        overlapping_walls = []
+        if wall[2] == "h":
+            overlapping_walls.append(chr(ord(wall[0]) - 1) + wall[1:])
+            overlapping_walls.append(chr(ord(wall[0]) + 1) + wall[1:])
+            overlapping_walls.append(wall[:2] + "v")
+        elif wall[2] == "v":
+            overlapping_walls.append(wall[0] + chr(ord(wall[1]) - 1) + wall[2])
+            overlapping_walls.append(wall[0] + chr(ord(wall[1]) + 1) + wall[2])
+            overlapping_walls.append(wall[:2] + "h")
+
+        for overlapping_wall in overlapping_walls:
+            if overlapping_wall in self.placed_walls:
+                return True
+        return False
 
     def _wall_out_of_bounds(self, wall) -> bool:
-        ...
+        return wall[0] < "a" or wall[0] > "h" or wall[1] < "1" or wall[1] > "8"
 
     def _is_reachable(self, player_pos, goal) -> bool:
         ...
@@ -149,27 +172,23 @@ class Quoridor:
             raise IllegalWallPlacementError(
                 message="Illegal wall placement, wall out of bounds"
             )
-        elif not self._is_reachable(self.current_player.pos, self.current_player.goal):
+        elif self._wall_overlaps:
             raise IllegalWallPlacementError(
-                message="Illegal wall placement, cannot reach your goal"
+                message="Illegal wall placements, wall overlaps with another wall"
             )
-        elif not self._is_reachable(self.waiting_player.pos, self.waiting_player.goal):
-            raise IllegalWallPlacementError(
-                message="Illegal wall placement, opponent cannot reach goal"
-            )
+        # elif not self._is_reachable(self.current_player.pos, self.current_player.goal):
+        #     raise IllegalWallPlacementError(
+        #         message="Illegal wall placement, you cannot reach your goal"
+        #     )
+        # elif not self._is_reachable(self.waiting_player.pos, self.waiting_player.goal):
+        #     raise IllegalWallPlacementError(
+        #         message="Illegal wall placement, opponent cannot reach goal"
+        #     )
         self.placed_walls.append(wall)
+        self.current_player.placed_walls.append(wall)
+        self.current_player.walls -= 1
+
         # remove connections
-
-    def get_pgn(self):
-        ...
-
-    def get_fen(self):
-        ...
-
-    def switch_player(self) -> None:
-        waiting = self.current_player
-        self.current_player = self.waiting_player
-        self.waiting_player = waiting
 
 
 if __name__ == "__main__":
@@ -180,12 +199,29 @@ if __name__ == "__main__":
     # print(bool(ALL_QUORIDOR_MOVES_REGEX.fullmatch(invalid)))
     # print(quoridor)
     # print(quoridor.player1)
-    command = ""
-    while command != "q":
-        print(f"current player: {quoridor.current_player}")
-        print(f"waiting player: {quoridor.waiting_player}")
-        print(f"legal_moves {quoridor._legal_pawn_moves()}")
-        command = input("Your move: ")
-        if command == "q":
-            break
-        quoridor.make_move(command)
+    # command = ""
+    # while command != "q":
+    #     print(f"current player: {quoridor.current_player}")
+    #     print(f"waiting player: {quoridor.waiting_player}")
+    #     print(f"legal_moves {quoridor._legal_pawn_moves()}")
+    #     command = input("Your move: ")
+    #     if command == "q":
+    #         break
+    #     quoridor.make_move(command)
+
+    # overlapping_walls = []
+    # wall = "g6v"
+    # if wall[2] == "h":
+    #     # 3 muren kunnen niet meer 1 horizontale muur links, 1 rechts horizontaal, en 1 rechts verticaal
+    #     overlapping_walls.append(chr(ord(wall[0]) - 1) + wall[1:])
+    #     overlapping_walls.append(chr(ord(wall[0]) + 1) + wall[1:])
+    #     overlapping_walls.append(wall[:2] + "v")
+
+    # elif wall[2] == "v":
+    #     # 3 muren kunnen niet meer 1 verticale boven, 1 verticale beneden, de laatste 1 boven horizontaal
+    #     overlapping_walls.append(wall[0] + chr(ord(wall[1]) - 1) + wall[2])
+    #     overlapping_walls.append(wall[0] + chr(ord(wall[1]) + 1) + wall[2])
+    #     overlapping_walls.append(wall[:2] + "h")
+
+    # print(overlapping_walls)
+    # print(quoridor._wall_out_of_bounds("c8v"))
