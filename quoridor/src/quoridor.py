@@ -7,7 +7,6 @@ from exceptions import InvalidMoveError, IllegalPawnMoveError, IllegalWallPlacem
 
 
 ALL_QUORIDOR_MOVES_REGEX = re.compile(r"[a-i][1-9](?:[hv])?")
-
 START_POS_P1 = "e4"
 GOAL_P1 = 9
 START_POS_P2 = "e3"
@@ -224,4 +223,4 @@ if __name__ == "__main__":
     #     overlapping_walls.append(wall[:2] + "h")
 
     # print(overlapping_walls)
-    # print(quoridor._wall_out_of_bounds("c8v"))
+    print(quoridor._wall_out_of_bounds("c8v"))
