@@ -20,3 +20,9 @@ class NoWallToPlaceError(Exception):
     def __init__(self, message="You have no walls to place"):
         self.message = message
         super().__init__(self.message)
+
+
+class GameCompletedError(Exception):
+    def __init__(self, message="You cant't make a move since the game is over."):
+        self.message = message
+        super().__init__(self.message)

@@ -8,6 +8,7 @@ from exceptions import (
     IllegalPawnMoveError,
     IllegalWallPlacementError,
     NoWallToPlaceError,
+    GameCompletedError,
 )
 
 
@@ -27,6 +28,15 @@ class Player:
     goal: str
     walls: int = START_WALLS
     placed_walls: List[str] = field(default_factory=lambda: [])
+
+
+@dataclass
+class GameResult:
+    total_moves: int
+    placed_walls: List[str]
+    winner: Player
+    loser: Player
+    pgn: str
 
 
 class Quoridor:
@@ -84,18 +94,46 @@ class Quoridor:
 
     def make_move(self, move: str):
 
+        if self.is_terminated:
+            raise GameCompletedError()
+
         self.validate_move(move)
+        self.moves.append(move)
+
         if len(move) == 2:
             self._make_pawn_move(move)
+            if self.current_player.pos[1] == self.current_player.goal:
+                self.is_terminated = True
+                return
         else:
             self._make_wall_move(self.board, move)
-        self.moves.append(move)
         self._switch_player()
 
     def get_pgn(self) -> str:
         return "/".join(self.moves)
 
     def get_fen(self):
+        ...
+
+    def play_terminal(self) -> GameResult:
+        while not self.is_terminated:
+            print(f"current player: {quoridor.current_player}")
+            print(f"waiting player: {quoridor.waiting_player}")
+            print(f"legal_moves {quoridor._legal_pawn_moves()}")
+            command = input("Your move: ")
+            if command == "q":
+                break
+            quoridor.make_move(command)
+        return GameResult(
+            total_moves=len(self.moves),
+            placed_walls=self.placed_walls,
+            winner=self.current_player,
+            loser=self.waiting_player,
+            pgn=self.get_pgn(),
+        )
+
+    def print_pretty_board(self):
+        """Print the board in a pretty way"""
         ...
 
     def _switch_player(self) -> None:
@@ -260,22 +298,14 @@ if __name__ == "__main__":
     quoridor = Quoridor()
     invalid_pgn = "e2/e8/a5h/c5h/e5h/g5h/h6v/h7h"
     valid_pgn = "e2/e8/a5h/c5h/e5h/g5h/h6v"
-    quoridor = Quoridor.init_from_pgn(valid_pgn)
+    # quoridor = Quoridor.init_from_pgn(valid_pgn)
     # vmove = "e5k"
     # invalid = "j4"
     # print(bool(ALL_QUORIDOR_MOVES_REGEX.fullmatch(vmove)))
     # print(bool(ALL_QUORIDOR_MOVES_REGEX.fullmatch(invalid)))
     # print(quoridor)
     # print(quoridor.player1)
-    command = ""
-    while command != "q" or not quoridor.is_terminated:
-        print(f"current player: {quoridor.current_player}")
-        print(f"waiting player: {quoridor.waiting_player}")
-        print(f"legal_moves {quoridor._legal_pawn_moves()}")
-        command = input("Your move: ")
-        if command == "q":
-            break
-        quoridor.make_move(command)
+    print(quoridor.play_terminal())
 
     # overlapping_walls = []
     # wall = "g6v"
@@ -293,13 +323,13 @@ if __name__ == "__main__":
 
     # print(overlapping_walls)
     print(quoridor.get_pgn())
-    # print(quoridor._wall_out_of_bounds("c8v"))
-    graph = graph = {
-        "a5": ["a3", "a7"],
-        "a3": ["a2", "a4"],
-        "a7": ["a9"],
-        "a2": [],
-        "a4": ["a8"],
-        "a8": [],
-    }
-    print(quoridor.dfs(set(), graph, "a4", "9"))
+    # # print(quoridor._wall_out_of_bounds("c8v"))
+    # graph = graph = {
+    #     "a5": ["a3", "a7"],
+    #     "a3": ["a2", "a4"],
+    #     "a7": ["a9"],
+    #     "a2": [],
+    #     "a4": ["a8"],
+    #     "a8": [],
+    # }
+    # print(quoridor.dfs(set(), graph, "a4", "9"))
