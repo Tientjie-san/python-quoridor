@@ -3,7 +3,12 @@ import re
 from copy import deepcopy
 from typing import Dict, List, Set
 from dataclasses import dataclass, field
-from exceptions import InvalidMoveError, IllegalPawnMoveError, IllegalWallPlacementError
+from exceptions import (
+    InvalidMoveError,
+    IllegalPawnMoveError,
+    IllegalWallPlacementError,
+    NoWallToPlaceError,
+)
 
 
 ALL_QUORIDOR_MOVES_REGEX = re.compile(r"[a-i][1-9](?:[hv])?")
@@ -32,12 +37,12 @@ class Quoridor:
         self.current_player = self.player1
         self.waiting_player = self.player2
         self.placed_walls = []
-        self.legal_walls = [
-            string.ascii_letters[i] + str(j) + c
-            for i in range(8)
-            for j in range(1, 9)
-            for c in ["h", "v"]
-        ]
+        # self.legal_walls = [
+        #     string.ascii_letters[i] + str(j) + c
+        #     for i in range(8)
+        #     for j in range(1, 9)
+        #     for c in ["h", "v"]
+        # ]
         self.is_terminated = False
 
     @classmethod
@@ -165,6 +170,8 @@ class Quoridor:
         ...
 
     def _make_wall_move(self, wall: str):
+        if self.current_player.walls == 0:
+            raise NoWallToPlaceError()
         if wall not in self.legal_walls:
             raise IllegalWallPlacementError()
         elif self._wall_out_of_bounds:
