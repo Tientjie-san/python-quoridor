@@ -37,12 +37,6 @@ class Quoridor:
         self.current_player = self.player1
         self.waiting_player = self.player2
         self.placed_walls = []
-        # self.legal_walls = [
-        #     string.ascii_letters[i] + str(j) + c
-        #     for i in range(8)
-        #     for j in range(1, 9)
-        #     for c in ["h", "v"]
-        # ]
         self.is_terminated = False
 
     @classmethod
@@ -56,10 +50,10 @@ class Quoridor:
         return quoridor
 
     def __repr__(self) -> str:
-        return f"board: {self.board} \nlegal fences: {self.legal_walls}"
+        return f"board: {self.board}"
 
     def __str__(self) -> str:
-        return f"board: {self.board} \nlegal fences: {self.legal_walls}"
+        return f"board: {self.board}"
 
     def _create_board(self) -> Dict[str, List[str]]:
         board: Dict[str, List[str]] = dict()
@@ -79,14 +73,22 @@ class Quoridor:
 
         return board
 
-    def make_move(self, move: str):
+    def validate_move(self, move: str):
         if not bool(ALL_QUORIDOR_MOVES_REGEX.fullmatch(move)):
             raise InvalidMoveError()
         elif len(move) == 2:
+            self._validate_pawn_move(move)
+        else:
+            self._validate_wall_move(move)
+
+    def make_move(self, move: str):
+
+        self.validate_move(move)
+        if len(move) == 2:
             self._make_pawn_move(move)
         else:
             self._make_wall_move((move))
-        self.switch_player()
+        self._switch_player()
 
     def get_pgn(self):
         ...
@@ -94,21 +96,45 @@ class Quoridor:
     def get_fen(self):
         ...
 
-    def switch_player(self) -> None:
+    def _switch_player(self) -> None:
         waiting = self.current_player
         self.current_player = self.waiting_player
         self.waiting_player = waiting
 
-    def _make_pawn_move(self, move: str):
+    def _validate_pawn_move(self, move):
         if move not in self._legal_pawn_moves():
             raise IllegalPawnMoveError()
-        else:
-            self.current_player.pos = move
+
+    def _validate_wall_move(self, move):
+        if self.current_player.walls == 0:
+            raise NoWallToPlaceError()
+        elif self._wall_out_of_bounds(move):
+            raise IllegalWallPlacementError(
+                message="Illegal wall placement, wall out of bounds"
+            )
+        elif self._wall_overlaps(move):
+            raise IllegalWallPlacementError(
+                message="Illegal wall placements, wall overlaps with another wall"
+            )
+        # elif not self._is_reachable(self.current_player.pos, self.current_player.goal):
+        #     raise IllegalWallPlacementError(
+        #         message="Illegal wall placement, you cannot reach your goal"
+        #     )
+        # elif not self._is_reachable(self.waiting_player.pos, self.waiting_player.goal):
+        #     raise IllegalWallPlacementError(
+        #         message="Illegal wall placement, opponent cannot reach goal"
+        #     )
+
+    def _make_pawn_move(self, move: str):
+        self.current_player.pos = move
 
     def _legal_pawn_moves(self) -> Set[str]:
 
         """Returns legal pawn moves for the current player"""
-        legal_pawn_moves = self.board[self.current_player.pos]
+
+        # make a temporary copy of the list
+        legal_pawn_moves = self.board[self.current_player.pos][:]
+
         # check if the other player is in range of current player for jumping moves
         if self.waiting_player.pos in legal_pawn_moves:
             legal_pawn_moves.remove(self.waiting_player.pos)
@@ -137,8 +163,11 @@ class Quoridor:
                         ord(self.current_player.pos[1]) + 2
                     )
             if pos_behind in self.board[self.waiting_player.pos]:
+                print(pos_behind)
                 legal_pawn_moves.append(pos_behind)
             else:
+                print(pos_behind)
+                print(self.board[self.waiting_player.pos])
                 legal_pawn_moves.extend(
                     pos
                     for pos in self.board[self.waiting_player.pos]
@@ -170,31 +199,37 @@ class Quoridor:
         ...
 
     def _make_wall_move(self, wall: str):
-        if self.current_player.walls == 0:
-            raise NoWallToPlaceError()
-        if wall not in self.legal_walls:
-            raise IllegalWallPlacementError()
-        elif self._wall_out_of_bounds:
-            raise IllegalWallPlacementError(
-                message="Illegal wall placement, wall out of bounds"
-            )
-        elif self._wall_overlaps:
-            raise IllegalWallPlacementError(
-                message="Illegal wall placements, wall overlaps with another wall"
-            )
-        # elif not self._is_reachable(self.current_player.pos, self.current_player.goal):
-        #     raise IllegalWallPlacementError(
-        #         message="Illegal wall placement, you cannot reach your goal"
-        #     )
-        # elif not self._is_reachable(self.waiting_player.pos, self.waiting_player.goal):
-        #     raise IllegalWallPlacementError(
-        #         message="Illegal wall placement, opponent cannot reach goal"
-        #     )
         self.placed_walls.append(wall)
         self.current_player.placed_walls.append(wall)
         self.current_player.walls -= 1
 
         # remove connections
+        cell = wall[:2]
+        if wall[2] == "h":
+            # e3h verwijderd verbinding tussen e3-e4 en f3-f4
+            connected_cells = [
+                (cell, cell[0] + chr(ord(cell[1]) + 1)),
+                (
+                    chr(ord(cell[0]) + 1) + cell[1],
+                    chr(ord(cell[0]) + 1) + chr(ord(cell[1]) + 1),
+                ),
+            ]
+
+        else:
+            # g6v verwijderd verbinding tussen g6-h6 en g7-h7
+            connected_cells = [
+                (cell, chr(ord(cell[0]) + 1) + cell[1]),
+                (
+                    cell[0] + chr(ord(cell[1]) + 1),
+                    chr(ord(cell[0]) + 1) + chr(ord(cell[1]) + 1),
+                ),
+            ]
+        for cell_pair in connected_cells:
+            # remove cell connections
+            if cell_pair[0] in self.board[cell_pair[1]]:
+                self.board[cell_pair[1]].remove(cell_pair[0])
+            if cell_pair[1] in self.board[cell_pair[0]]:
+                self.board[cell_pair[0]].remove(cell_pair[1])
 
 
 if __name__ == "__main__":
@@ -205,15 +240,15 @@ if __name__ == "__main__":
     # print(bool(ALL_QUORIDOR_MOVES_REGEX.fullmatch(invalid)))
     # print(quoridor)
     # print(quoridor.player1)
-    # command = ""
-    # while command != "q":
-    #     print(f"current player: {quoridor.current_player}")
-    #     print(f"waiting player: {quoridor.waiting_player}")
-    #     print(f"legal_moves {quoridor._legal_pawn_moves()}")
-    #     command = input("Your move: ")
-    #     if command == "q":
-    #         break
-    #     quoridor.make_move(command)
+    command = ""
+    while command != "q":
+        print(f"current player: {quoridor.current_player}")
+        print(f"waiting player: {quoridor.waiting_player}")
+        print(f"legal_moves {quoridor._legal_pawn_moves()}")
+        command = input("Your move: ")
+        if command == "q":
+            break
+        quoridor.make_move(command)
 
     # overlapping_walls = []
     # wall = "g6v"
