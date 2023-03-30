@@ -1,7 +1,8 @@
 import string
 import re
+from enum import Enum
 from copy import deepcopy
-from typing import Dict, List, Set
+from typing import Optional, Dict, List, Set
 from dataclasses import dataclass, field
 from exceptions import (
     InvalidMoveError,
@@ -30,13 +31,20 @@ class Player:
     placed_walls: List[str] = field(default_factory=lambda: [])
 
 
+class GameStatus(Enum):
+    COMPLETED = "Completed"
+    CANCELLED = "Canceled"
+    ONGOING = "Ongoing"
+
+
 @dataclass
 class GameResult:
+    status: str
     total_moves: int
     placed_walls: List[str]
-    winner: Player
-    loser: Player
     pgn: str
+    winner: Optional[Player] = None
+    loser: Optional[Player] = None
 
 
 class Quoridor:
@@ -48,6 +56,7 @@ class Quoridor:
         self.waiting_player = self.player2
         self.placed_walls = []
         self.moves = []
+        self.status = GameStatus.ONGOING
         self.is_terminated = False
 
     @classmethod
@@ -104,6 +113,7 @@ class Quoridor:
             self._make_pawn_move(move)
             if self.current_player.pos[1] == self.current_player.goal:
                 self.is_terminated = True
+                self.status = GameStatus.COMPLETED
                 return
         else:
             self._make_wall_move(self.board, move)
@@ -122,9 +132,18 @@ class Quoridor:
             print(f"legal_moves {quoridor._legal_pawn_moves()}")
             command = input("Your move: ")
             if command == "q":
-                break
+                self.status = GameStatus.CANCELLED
+                return GameResult(
+                    status=self.status,
+                    total_moves=len(self.moves),
+                    placed_walls=self.placed_walls,
+                    pgn=self.get_pgn(),
+                )
+
             quoridor.make_move(command)
+
         return GameResult(
+            status=self.status,
             total_moves=len(self.moves),
             placed_walls=self.placed_walls,
             winner=self.current_player,
@@ -159,7 +178,7 @@ class Quoridor:
 
         # check reachability for both players
         copy_board = deepcopy(self.board)
-        self._make_wall_move(copy_board, move)
+        self._remove_connections(copy_board, move)
 
         if not self._is_reachable(
             copy_board, self.current_player.pos, self.current_player.goal
@@ -177,15 +196,15 @@ class Quoridor:
     def _is_reachable(self, board, player_pos, player_goal) -> bool:
         # we use a dfs approach since this is the fastest way to determine if there is a path to the goal
 
-        return self.dfs(set(), board, player_pos, player_goal)
+        return self._dfs(set(), board, player_pos, player_goal)
 
-    def dfs(self, visited, graph, node, goal):  # function for dfs
+    def _dfs(self, visited, graph, node, goal):
         if node not in visited:
             visited.add(node)
             for neighbour in graph[node]:
                 if neighbour[1] == goal:
                     return True
-                if self.dfs(visited, graph, neighbour, goal):
+                if self._dfs(visited, graph, neighbour, goal):
                     return True
         return False
 
@@ -261,11 +280,7 @@ class Quoridor:
     def _wall_out_of_bounds(self, wall) -> bool:
         return wall[0] < "a" or wall[0] > "h" or wall[1] < "1" or wall[1] > "8"
 
-    def _make_wall_move(self, board: Dict[str, List[str]], wall: str):
-        self.placed_walls.append(wall)
-        self.current_player.placed_walls.append(wall)
-        self.current_player.walls -= 1
-
+    def _remove_connections(self, board: Dict[str, List[str]], wall: str):
         # remove connections
         cell = wall[:2]
         if wall[2] == "h":
@@ -292,6 +307,13 @@ class Quoridor:
                 board[cell_pair[1]].remove(cell_pair[0])
             if cell_pair[1] in self.board[cell_pair[0]]:
                 board[cell_pair[0]].remove(cell_pair[1])
+
+    def _make_wall_move(self, board: Dict[str, List[str]], wall: str):
+        self.placed_walls.append(wall)
+        self.current_player.placed_walls.append(wall)
+        self.current_player.walls -= 1
+
+        self._remove_connections(board, wall)
 
 
 if __name__ == "__main__":
@@ -332,4 +354,4 @@ if __name__ == "__main__":
     #     "a4": ["a8"],
     #     "a8": [],
     # }
-    # print(quoridor.dfs(set(), graph, "a4", "9"))
+    # print(quoridor._dfs(set(), graph, "a4", "9"))
