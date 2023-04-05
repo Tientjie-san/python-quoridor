@@ -1,4 +1,4 @@
-from quoridor.src.quoridor import Quoridor
+from quoridor import Quoridor
 
 if __name__ == "__main__":
     quoridor = Quoridor()
@@ -40,3 +40,5 @@ if __name__ == "__main__":
     #     "a8": [],
     # }
     # print(quoridor._dfs(set(), graph, "a4", "9"))
+quoridor.reset()
+quoridor.play_terminal()

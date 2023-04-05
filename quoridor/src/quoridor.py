@@ -29,7 +29,7 @@ import string
 import re
 from enum import Enum
 from copy import deepcopy
-from typing import Optional, Dict, List, Set
+from typing import Optional, Dict, List, Set, Pattern
 from dataclasses import dataclass, field
 from .exceptions import (
     InvalidMoveError,
@@ -37,17 +37,17 @@ from .exceptions import (
     IllegalWallPlacementError,
     NoWallToPlaceError,
     GameCompletedError,
-    NothingToUndoError
+    NothingToUndoError,
 )
 
 
-ALL_QUORIDOR_MOVES_REGEX = re.compile(r"[a-i][1-9](?:[hv])?")
-START_POS_P1 = "e1"
-GOAL_P1 = "9"
-START_POS_P2 = "e9"
-GOAL_P2 = "1"
-START_WALLS = 10
-POSSIBLE_WALLS = [
+ALL_QUORIDOR_MOVES_REGEX: Pattern = re.compile(r"[a-i][1-9](?:[hv])?")
+START_POS_P1: str = "e1"
+GOAL_P1: str = "9"
+START_POS_P2: str = "e9"
+GOAL_P2: str = "1"
+START_WALLS: str = 10
+POSSIBLE_WALLS: List[str] = [
     string.ascii_letters[i] + str(j) + c
     for i in range(8)
     for j in range(1, 9)
@@ -89,9 +89,9 @@ class GameStatus(Enum):
     Represents the possible statuses of a Quoridor game.
     """
 
-    COMPLETED = "Completed"
-    CANCELLED = "Canceled"
-    ONGOING = "Ongoing"
+    COMPLETED: str = "Completed"
+    CANCELLED: str = "Canceled"
+    ONGOING: str = "Ongoing"
 
 
 @dataclass
@@ -130,8 +130,8 @@ class Quoridor:
     Attributes
     ----------
     board : dict of str and list of str
-        The game board, represented as a 
-        dictionary of coordinates and 
+        The game board, represented as a
+        dictionary of coordinates and
         the coordinates of the adjacent cells.
     player1 : Player
         The first player.
@@ -152,9 +152,13 @@ class Quoridor:
     """
 
     def __init__(self) -> None:
-        self.board = self._create_board()
-        self.player1 = Player(id=1, pos=START_POS_P1, goal=GOAL_P1, position_history=[START_POS_P1])
-        self.player2 = Player(id=2, pos=START_POS_P2, goal=GOAL_P2, position_history=[START_POS_P2])
+        self.board: Dict[str, List[str]] = self._create_board()
+        self.player1 = Player(
+            id=1, pos=START_POS_P1, goal=GOAL_P1, position_history=[START_POS_P1]
+        )
+        self.player2 = Player(
+            id=2, pos=START_POS_P2, goal=GOAL_P2, position_history=[START_POS_P2]
+        )
         self.current_player = self.player1
         self.waiting_player = self.player2
         self.placed_walls = []
@@ -194,15 +198,32 @@ class Quoridor:
     def __str__(self) -> str:
         return f"board: {self.board}"
 
+    def reset(self) -> None:
+        """
+        Reset quoridor game to its initial state.
+
+        This method reinitializes the instance by calling its `__init__` method. All
+        instance variables are reset to their default values.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+        self.__init__()
+
     def _create_board(self) -> Dict[str, List[str]]:
         """
-        Creates and returns a dictionary representing the Quoridor board, 
+        Creates and returns a dictionary representing the Quoridor board,
         with each key representing a cell and its value being a list of connected cells.
 
         Returns:
         --------
         board: Dict[str, List[str]]
-            A dictionary representing the Quoridor board, with each key representing a 
+            A dictionary representing the Quoridor board, with each key representing a
             cell and its value being a list of connected cells.
         """
         board: Dict[str, List[str]] = {}
@@ -341,7 +362,6 @@ class Quoridor:
 
         self._switch_player()
 
-
     def play_terminal(self) -> GameResult:
         """
         Starts the game and prompts the users to input their moves through the terminal.
@@ -349,7 +369,7 @@ class Quoridor:
         Returns:
         -------
         GameResult
-            A named tuple that contains the outcome of the game and its associated 
+            A named tuple that contains the outcome of the game and its associated
             metadata, including:
             * status: The status of the game at the end of play.
             * total_moves: The total number of moves made during the game.
@@ -428,7 +448,7 @@ class Quoridor:
         NoWallToPlaceError
             If the current player has no walls to place.
         IllegalWallPlacementError
-            If the move is not legal, e.g. if the wall is out of bounds, 
+            If the move is not legal, e.g. if the wall is out of bounds,
             overlaps with another wall, or
             blocks one of the players from reaching their goal.
         """
@@ -462,7 +482,7 @@ class Quoridor:
 
     def _is_reachable(self, board, player_pos, player_goal) -> bool:
         """
-        Determines if the player can reach their goal from their 
+        Determines if the player can reach their goal from their
         current position on the board.
 
         Parameters:
@@ -513,7 +533,7 @@ class Quoridor:
 
     def _make_pawn_move(self, move: str):
         """
-        Makes a move for the current player by moving their pawn to 
+        Makes a move for the current player by moving their pawn to
         the specified position on the board.
 
         Parameters:
@@ -591,7 +611,7 @@ class Quoridor:
                 continue
             try:
                 self.validate_move(wall)
-            except Exception :
+            except Exception:
                 continue
             legal_walls.append(wall)
         return legal_walls
