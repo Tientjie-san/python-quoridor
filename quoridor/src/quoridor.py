@@ -1,10 +1,37 @@
+"""_summary_
+
+    Returns
+    -------
+    _type_
+        _description_
+
+    Raises
+    ------
+    InvalidMoveError
+        _description_
+    GameCompletedError
+        _description_
+    IllegalPawnMoveError
+        _description_
+    NoWallToPlaceError
+        _description_
+    IllegalWallPlacementError
+        _description_
+    IllegalWallPlacementError
+        _description_
+    IllegalWallPlacementError
+        _description_
+    IllegalWallPlacementError
+        _description_
+"""
+
 import string
 import re
 from enum import Enum
 from copy import deepcopy
 from typing import Optional, Dict, List, Set
 from dataclasses import dataclass, field
-from exceptions import (
+from .exceptions import (
     InvalidMoveError,
     IllegalPawnMoveError,
     IllegalWallPlacementError,
@@ -19,10 +46,32 @@ GOAL_P1 = "9"
 START_POS_P2 = "e9"
 GOAL_P2 = "1"
 START_WALLS = 10
+POSSIBLE_WALLS = [
+    string.ascii_letters[i] + str(j) + c
+    for i in range(8)
+    for j in range(1, 9)
+    for c in ["h", "v"]
+]
 
 
 @dataclass
 class Player:
+    """
+    Represents a player in the Quoridor game.
+
+    Attributes
+    ----------
+    id : int
+        The player's ID.
+    pos : str
+        The player's current position on the board.
+    goal : str
+        The player's goal on the board.
+    walls : int, optional
+        The number of walls the player has, by default `START_WALLS`.
+    placed_walls : list of str, optional
+        A list of walls the player has placed, by default `[]`.
+    """
 
     id: int
     pos: str
@@ -32,6 +81,10 @@ class Player:
 
 
 class GameStatus(Enum):
+    """
+    Represents the possible statuses of a Quoridor game.
+    """
+
     COMPLETED = "Completed"
     CANCELLED = "Canceled"
     ONGOING = "Ongoing"
@@ -39,6 +92,25 @@ class GameStatus(Enum):
 
 @dataclass
 class GameResult:
+    """
+    Represents the result of a Quoridor game.
+
+    Attributes
+    ----------
+    status : str
+        The status of the game.
+    total_moves : int
+        The total number of moves played.
+    placed_walls : list of str
+        A list of walls placed in the game.
+    pgn : str
+        The Portable Game Notation (PGN) of the game.
+    winner : Player, optional
+        The winning player, by default `None`.
+    loser : Player, optional
+        The losing player, by default `None`.
+    """
+
     status: str
     total_moves: int
     placed_walls: List[str]
@@ -48,6 +120,33 @@ class GameResult:
 
 
 class Quoridor:
+    """
+    Represents a game of Quoridor.
+
+    Attributes
+    ----------
+    board : dict of str and list of str
+        The game board, represented as a 
+        dictionary of coordinates and 
+        the coordinates of the adjacent cells.
+    player1 : Player
+        The first player.
+    player2 : Player
+        The second player.
+    current_player : Player
+        The player who is currently making a move.
+    waiting_player : Player
+        The player who is waiting for their turn.
+    placed_walls : list of str
+        A list of walls placed in the game.
+    moves : list of str
+        A list of moves played in the game.
+    status : GameStatus
+        The current status of the game.
+    is_terminated : bool
+        Whether or not the game is terminated.
+    """
+
     def __init__(self) -> None:
         self.board = self._create_board()
         self.player1 = Player(id=1, pos=START_POS_P1, goal=GOAL_P1)
@@ -60,10 +159,26 @@ class Quoridor:
         self.is_terminated = False
 
     @classmethod
-    def init_from_pgn(cls, pgn: str):
+    def init_from_pgn(cls, pgn: str) -> "Quoridor":
+        """
+        Initializes and returns a new Quoridor instance from the given PGN string.
+
+        Parameters:
+        -----------
+        pgn: str
+            The PGN string to be used to initialize the Quoridor instance.
+
+        Returns:
+        --------
+        quoridor: Quoridor
+            A new Quoridor instance initialized from the given PGN string.
+
+        Raises:
+        -------
+        InvalidMoveError:
+            If the given PGN string is invalid.
+        """
         quoridor = cls()
-        # validate pgn
-        # if valid continue generating the board
         moves = pgn.split("/")
         for move in moves:
             quoridor.make_move(move)
@@ -76,6 +191,16 @@ class Quoridor:
         return f"board: {self.board}"
 
     def _create_board(self) -> Dict[str, List[str]]:
+        """
+        Creates and returns a dictionary representing the Quoridor board, 
+        with each key representing a cell and its value being a list of connected cells.
+
+        Returns:
+        --------
+        board: Dict[str, List[str]]
+            A dictionary representing the Quoridor board, with each key representing a 
+            cell and its value being a list of connected cells.
+        """
         board: Dict[str, List[str]] = dict()
         for i in range(9):
             for j in range(1, 10):
@@ -94,6 +219,19 @@ class Quoridor:
         return board
 
     def validate_move(self, move: str):
+        """
+        Validates the given move string and raises an InvalidMoveError if it is invalid.
+
+        Parameters:
+        -----------
+        move: str
+            The move string to be validated.
+
+        Raises:
+        -------
+        InvalidMoveError:
+            If the given move string is invalid.
+        """
         if not bool(ALL_QUORIDOR_MOVES_REGEX.fullmatch(move)):
             raise InvalidMoveError()
         elif len(move) == 2:
@@ -102,6 +240,22 @@ class Quoridor:
             self._validate_wall_move(move)
 
     def make_move(self, move: str):
+        """
+        Makes the given move and updates the Quoridor instance accordingly.
+
+        Parameters:
+        -----------
+        move: str
+            The move string to be made.
+
+        Raises:
+        -------
+        GameCompletedError:
+            If the game has already been completed.
+
+        InvalidMoveError:
+            If the given move string is invalid.
+        """
 
         if self.is_terminated:
             raise GameCompletedError()
@@ -120,16 +274,42 @@ class Quoridor:
         self._switch_player()
 
     def get_pgn(self) -> str:
+        """
+        Returns the PGN string representation of the moves made in the Quoridor game.
+
+        Returns:
+        --------
+        pgn: str
+            The PGN string representation of the moves made in the Quoridor game.
+        """
         return "/".join(self.moves)
 
     def get_fen(self):
         ...
 
+    def undo_move(self):
+        ...
+
     def play_terminal(self) -> GameResult:
+        """
+        Starts the game and prompts the users to input their moves through the terminal.
+
+        Returns:
+        -------
+        GameResult
+            A named tuple that contains the outcome of the game and its associated 
+            metadata, including:
+            * status: The status of the game at the end of play.
+            * total_moves: The total number of moves made during the game.
+            * placed_walls: The number of walls placed during the game.
+            * winner: The player who won the game.
+            * loser: The player who lost the game.
+            * pgn: The Portable Game Notation representation of the game's moves.
+        """
         while not self.is_terminated:
-            print(f"current player: {quoridor.current_player}")
-            print(f"waiting player: {quoridor.waiting_player}")
-            print(f"legal_moves {quoridor._legal_pawn_moves()}")
+            print(f"current player: {self.current_player}")
+            print(f"waiting player: {self.waiting_player}")
+            print(f"legal_moves {self.get_legal_moves()}")
             command = input("Your move: ")
             if command == "q":
                 self.status = GameStatus.CANCELLED
@@ -140,7 +320,7 @@ class Quoridor:
                     pgn=self.get_pgn(),
                 )
 
-            quoridor.make_move(command)
+            self.make_move(command)
 
         return GameResult(
             status=self.status,
@@ -156,22 +336,55 @@ class Quoridor:
         ...
 
     def _switch_player(self) -> None:
+        """
+        Swaps the current player and waiting player.
+        """
         waiting = self.current_player
         self.current_player = self.waiting_player
         self.waiting_player = waiting
 
     def _validate_pawn_move(self, move):
-        if move not in self._legal_pawn_moves():
+        """
+        Validates if the specified pawn move is legal.
+
+        Parameters:
+        ----------
+        move : str
+            The move to be validated.
+
+        Raises:
+        -------
+        IllegalPawnMoveError
+            If the move is not legal.
+        """
+        if move not in self.get_legal_pawn_moves():
             raise IllegalPawnMoveError()
 
     def _validate_wall_move(self, move):
+        """
+        Validates if the specified wall move is legal.
+
+        Parameters:
+        ----------
+        move : str
+            The move to be validated.
+
+        Raises:
+        -------
+        NoWallToPlaceError
+            If the current player has no walls to place.
+        IllegalWallPlacementError
+            If the move is not legal, e.g. if the wall is out of bounds, 
+            overlaps with another wall, or
+            blocks one of the players from reaching their goal.
+        """
         if self.current_player.walls == 0:
             raise NoWallToPlaceError()
-        elif self._wall_out_of_bounds(move):
+        if self._wall_out_of_bounds(move):
             raise IllegalWallPlacementError(
                 message="Illegal wall placement, wall out of bounds"
             )
-        elif self._wall_overlaps(move):
+        if self._wall_overlaps(move):
             raise IllegalWallPlacementError(
                 message="Illegal wall placements, wall overlaps with another wall"
             )
@@ -194,11 +407,47 @@ class Quoridor:
             )
 
     def _is_reachable(self, board, player_pos, player_goal) -> bool:
-        # we use a dfs approach since this is the fastest way to determine if there is a path to the goal
+        """
+        Determines if the player can reach their goal from their 
+        current position on the board.
+
+        Parameters:
+        ----------
+        board : dict
+            A dictionary representing the board's configuration.
+        player_pos : str
+            A string representing the player's position on the board.
+        player_goal : int
+            The row number of the player's goal.
+
+        Returns:
+        -------
+        bool
+            True if the player can reach their goal, False otherwise.
+        """
 
         return self._dfs(set(), board, player_pos, player_goal)
 
     def _dfs(self, visited, graph, node, goal):
+        """
+        Recursive function to perform depth-first search on the board graph.
+
+        Parameters:
+        ----------
+        visited : set
+            A set of visited nodes.
+        graph : dict
+            A dictionary representing the board's configuration.
+        node : str
+            The current node being visited.
+        goal : int
+            The row number of the player's goal.
+
+        Returns:
+        -------
+        bool
+            True if a path to the goal exists, False otherwise.
+        """
         if node not in visited:
             visited.add(node)
             for neighbour in graph[node]:
@@ -209,11 +458,26 @@ class Quoridor:
         return False
 
     def _make_pawn_move(self, move: str):
+        """
+        Makes a move for the current player by moving their pawn to 
+        the specified position on the board.
+
+        Parameters:
+        ----------
+        move : str
+            A string representing the new position of the player's pawn on the board.
+        """
         self.current_player.pos = move
 
-    def _legal_pawn_moves(self) -> Set[str]:
+    def get_legal_pawn_moves(self) -> Set[str]:
+        """
+        Get the legal moves for the current player's pawn.
 
-        """Returns legal pawn moves for the current player"""
+        Returns
+        -------
+        set of str
+            The set of legal moves for the current player's pawn.
+        """
 
         # make a temporary copy of the list
         legal_pawn_moves = self.board[self.current_player.pos][:]
@@ -256,7 +520,53 @@ class Quoridor:
 
         return set(legal_pawn_moves)
 
+    def get_legal_wall_moves(self) -> List[str]:
+        """
+        Get the legal wall moves for the current player.
+
+        Returns
+        -------
+        list of str
+            The list of legal wall moves for the current player.
+        """
+        legal_walls = []
+        if self.current_player.walls == 0:
+            return legal_walls
+        for wall in POSSIBLE_WALLS:
+            if wall in self.placed_walls:
+                continue
+            try:
+                self.validate_move(wall)
+            except Exception :
+                continue
+            legal_walls.append(wall)
+        return legal_walls
+
+    def get_legal_moves(self) -> List[str]:
+        """
+        Get the legal moves for the current player.
+
+        Returns
+        -------
+        list of str
+            The list of legal moves for the current player.
+        """
+        return list(self.get_legal_pawn_moves()) + self.get_legal_wall_moves()
+
     def _wall_overlaps(self, wall: str) -> bool:
+        """
+        Check if the given wall overlaps with a previously placed wall.
+
+        Parameters
+        ----------
+        wall : str
+            The wall to check for overlaps.
+
+        Returns
+        -------
+        bool
+            True if the wall overlaps with a previously placed wall, False otherwise.
+        """
 
         if wall in self.placed_walls:
             return True
@@ -278,9 +588,32 @@ class Quoridor:
         return False
 
     def _wall_out_of_bounds(self, wall) -> bool:
+        """
+        Check if the given wall is out of bounds.
+
+        Parameters
+        ----------
+        wall : str
+            The wall to check.
+
+        Returns
+        -------
+        bool
+            True if the wall is out of bounds, False otherwise.
+        """
         return wall[0] < "a" or wall[0] > "h" or wall[1] < "1" or wall[1] > "8"
 
     def _remove_connections(self, board: Dict[str, List[str]], wall: str):
+        """
+        Remove the connections between the cells affected by the given wall.
+
+        Parameters
+        ----------
+        board : dict of {str: list of str}
+            The board to remove the connections from.
+        wall : str
+            The wall to remove the connections for.
+        """
         # remove connections
         cell = wall[:2]
         if wall[2] == "h":
@@ -309,49 +642,18 @@ class Quoridor:
                 board[cell_pair[0]].remove(cell_pair[1])
 
     def _make_wall_move(self, board: Dict[str, List[str]], wall: str):
+        """
+        Make a wall move for the current player.
+
+        Parameters
+        ----------
+        board : dict of {str: list of str}
+            The board to make the move on.
+        wall : str
+            The wall to place on the board.
+        """
         self.placed_walls.append(wall)
         self.current_player.placed_walls.append(wall)
         self.current_player.walls -= 1
 
         self._remove_connections(board, wall)
-
-
-if __name__ == "__main__":
-    quoridor = Quoridor()
-    invalid_pgn = "e2/e8/a5h/c5h/e5h/g5h/h6v/h7h"
-    valid_pgn = "e2/e8/a5h/c5h/e5h/g5h/h6v"
-    # quoridor = Quoridor.init_from_pgn(valid_pgn)
-    # vmove = "e5k"
-    # invalid = "j4"
-    # print(bool(ALL_QUORIDOR_MOVES_REGEX.fullmatch(vmove)))
-    # print(bool(ALL_QUORIDOR_MOVES_REGEX.fullmatch(invalid)))
-    # print(quoridor)
-    # print(quoridor.player1)
-    print(quoridor.play_terminal())
-
-    # overlapping_walls = []
-    # wall = "g6v"
-    # if wall[2] == "h":
-    #     # 3 muren kunnen niet meer 1 horizontale muur links, 1 rechts horizontaal, en 1 rechts verticaal
-    #     overlapping_walls.append(chr(ord(wall[0]) - 1) + wall[1:])
-    #     overlapping_walls.append(chr(ord(wall[0]) + 1) + wall[1:])
-    #     overlapping_walls.append(wall[:2] + "v")
-
-    # elif wall[2] == "v":
-    #     # 3 muren kunnen niet meer 1 verticale boven, 1 verticale beneden, de laatste 1 boven horizontaal
-    #     overlapping_walls.append(wall[0] + chr(ord(wall[1]) - 1) + wall[2])
-    #     overlapping_walls.append(wall[0] + chr(ord(wall[1]) + 1) + wall[2])
-    #     overlapping_walls.append(wall[:2] + "h")
-
-    # print(overlapping_walls)
-    print(quoridor.get_pgn())
-    # # print(quoridor._wall_out_of_bounds("c8v"))
-    # graph = graph = {
-    #     "a5": ["a3", "a7"],
-    #     "a3": ["a2", "a4"],
-    #     "a7": ["a9"],
-    #     "a2": [],
-    #     "a4": ["a8"],
-    #     "a8": [],
-    # }
-    # print(quoridor._dfs(set(), graph, "a4", "9"))
