@@ -201,7 +201,7 @@ class Quoridor:
             A dictionary representing the Quoridor board, with each key representing a 
             cell and its value being a list of connected cells.
         """
-        board: Dict[str, List[str]] = dict()
+        board: Dict[str, List[str]] = {}
         for i in range(9):
             for j in range(1, 10):
                 connected_cells = []
@@ -234,7 +234,7 @@ class Quoridor:
         """
         if not bool(ALL_QUORIDOR_MOVES_REGEX.fullmatch(move)):
             raise InvalidMoveError()
-        elif len(move) == 2:
+        if len(move) == 2:
             self._validate_pawn_move(move)
         else:
             self._validate_wall_move(move)
@@ -333,7 +333,7 @@ class Quoridor:
 
     def print_pretty_board(self):
         """Print the board in a pretty way"""
-        ...
+        pass
 
     def _switch_player(self) -> None:
         """
@@ -399,7 +399,7 @@ class Quoridor:
             raise IllegalWallPlacementError(
                 message="Illegal wall placement, you cannot reach your goal"
             )
-        elif not self._is_reachable(
+        if not self._is_reachable(
             copy_board, self.waiting_player.pos, self.waiting_player.goal
         ):
             raise IllegalWallPlacementError(
