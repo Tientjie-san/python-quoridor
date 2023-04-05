@@ -5,6 +5,7 @@ description = "python-quoridor is a a quoridor library for python, with move gen
 authors = ["Tientjie <tientjieit@gmail.com>"]
 readme = "README.md"
 packages = [{include = "python_quoridor"}]
+license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.11"
