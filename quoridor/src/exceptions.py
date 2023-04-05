@@ -72,3 +72,19 @@ class GameCompletedError(Exception):
     def __init__(self, message="You cant't make a move since the game is over."):
         self.message = message
         super().__init__(self.message)
+
+
+class NothingToUndoError(Exception):
+    """
+    Exception raised when a undo action has been nothing when there is nothing to undo.
+
+    Parameters
+    ----------
+    message : str, optional
+        The error message to display. 
+        Defaults to ""There is nothing to undo"".
+    """
+
+    def __init__(self, message="There is nothing to undo"):
+        self.message = message
+        super().__init__(self.message)

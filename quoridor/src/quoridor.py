@@ -37,6 +37,7 @@ from .exceptions import (
     IllegalWallPlacementError,
     NoWallToPlaceError,
     GameCompletedError,
+    NothingToUndoError
 )
 
 
@@ -69,6 +70,8 @@ class Player:
         The player's goal on the board.
     walls : int, optional
         The number of walls the player has, by default `START_WALLS`.
+    position_history : list of str, optional
+        A list of postions the player has been ordered by turn, by default `[]`
     placed_walls : list of str, optional
         A list of walls the player has placed, by default `[]`.
     """
@@ -77,6 +80,7 @@ class Player:
     pos: str
     goal: str
     walls: int = START_WALLS
+    position_history: List[str] = field(default_factory=lambda: [])
     placed_walls: List[str] = field(default_factory=lambda: [])
 
 
@@ -149,8 +153,8 @@ class Quoridor:
 
     def __init__(self) -> None:
         self.board = self._create_board()
-        self.player1 = Player(id=1, pos=START_POS_P1, goal=GOAL_P1)
-        self.player2 = Player(id=2, pos=START_POS_P2, goal=GOAL_P2)
+        self.player1 = Player(id=1, pos=START_POS_P1, goal=GOAL_P1, position_history=[START_POS_P1])
+        self.player2 = Player(id=2, pos=START_POS_P2, goal=GOAL_P2, position_history=[START_POS_P2])
         self.current_player = self.player1
         self.waiting_player = self.player2
         self.placed_walls = []
@@ -288,7 +292,55 @@ class Quoridor:
         ...
 
     def undo_move(self):
-        ...
+        """
+        Undo the last move played in the game.
+
+        If the game is in its initial state, i.e., no moves have been played yet,
+        this function raises a `NothingToUndoError` exception.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NothingToUndoError
+            If there are no moves to undo.
+        """
+        if len(self.moves) == 0:
+            raise NothingToUndoError()
+        last_move = self.moves.pop()
+        if len(last_move) == 2:
+            self.waiting_player.pos = self.waiting_player.position_history.pop()
+        else:
+            wall = self.placed_walls.pop()
+            self.waiting_player.placed_walls.pop()
+            cell = wall[:2]
+            if wall[2] == "h":
+                # e3h verwijderd verbinding tussen e3-e4 en f3-f4
+                connected_cells = [
+                    (cell, cell[0] + chr(ord(cell[1]) + 1)),
+                    (
+                        chr(ord(cell[0]) + 1) + cell[1],
+                        chr(ord(cell[0]) + 1) + chr(ord(cell[1]) + 1),
+                    ),
+                ]
+            else:
+                # g6v verwijderd verbinding tussen g6-h6 en g7-h7
+                connected_cells = [
+                    (cell, chr(ord(cell[0]) + 1) + cell[1]),
+                    (
+                        cell[0] + chr(ord(cell[1]) + 1),
+                        chr(ord(cell[0]) + 1) + chr(ord(cell[1]) + 1),
+                    ),
+                ]
+            for cell_pair in connected_cells:
+                # remove cell connections
+                self.board[cell_pair[1]].append(cell_pair[0])
+                self.board[cell_pair[0]].append(cell_pair[1])
+
+        self._switch_player()
+
 
     def play_terminal(self) -> GameResult:
         """
@@ -319,8 +371,10 @@ class Quoridor:
                     placed_walls=self.placed_walls,
                     pgn=self.get_pgn(),
                 )
-
-            self.make_move(command)
+            if command == "undo":
+                self.undo_move()
+            else:
+                self.make_move(command)
 
         return GameResult(
             status=self.status,
