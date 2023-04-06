@@ -1,28 +1,4 @@
-"""_summary_
-
-    Returns
-    -------
-    _type_
-        _description_
-
-    Raises
-    ------
-    InvalidMoveError
-        _description_
-    GameCompletedError
-        _description_
-    IllegalPawnMoveError
-        _description_
-    NoWallToPlaceError
-        _description_
-    IllegalWallPlacementError
-        _description_
-    IllegalWallPlacementError
-        _description_
-    IllegalWallPlacementError
-        _description_
-    IllegalWallPlacementError
-        _description_
+"""Module for playing quoridor
 """
 
 import string
@@ -308,9 +284,6 @@ class Quoridor:
             The PGN string representation of the moves made in the Quoridor game.
         """
         return "/".join(self.moves)
-
-    def get_fen(self):
-        ...
 
     def undo_move(self):
         """

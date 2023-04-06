@@ -1,3 +1,7 @@
+"""Module for all quoridor exceptions
+"""
+
+
 class InvalidMoveError(Exception):
     """
     Exception raised when a move is given in an invalid form.
@@ -65,7 +69,7 @@ class GameCompletedError(Exception):
     Parameters
     ----------
     message : str, optional
-        The error message to display. 
+        The error message to display.
         Defaults to "You cant't make a move since the game is over.".
     """
 
@@ -81,7 +85,7 @@ class NothingToUndoError(Exception):
     Parameters
     ----------
     message : str, optional
-        The error message to display. 
+        The error message to display.
         Defaults to ""There is nothing to undo"".
     """
 
