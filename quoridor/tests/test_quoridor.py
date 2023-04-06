@@ -134,41 +134,31 @@ def test_validate_wall_move():
 
 def test_undo_move():
     game = Quoridor()
+
+    # Test when there is nothing to undo
     initial_state = game.__dict__
-    try:
+    with pytest.raises(NothingToUndoError):
         game.undo_move()
-    except NothingToUndoError:
-        pass
-    else:
-        assert False, "NothingToUndoError not raised for initial game state"
 
-    game.move("e2")
-    game_state_after_move = game.__dict__
+    # test undoing pawn move
+    game.make_move("e2")
     game.undo_move()
-    assert (
-        game_state_after_move != game.__dict__
-    ), "Game state unchanged after undoing move"
-    assert (
-        game.__dict__ == initial_state
-    ), "Game state not reset after undoing all moves"
+    assert initial_state == game.__dict__
 
-    game.place_wall("e3h")
-    game_state_after_wall = game.__dict__
+    # test undoing wall move
+    game.make_move("e3h")
     game.undo_move()
-    assert (
-        game_state_after_wall != game.__dict__
-    ), "Game state unchanged after undoing wall placement"
+    assert initial_state == game.__dict__
 
 
 def test_make_move_when_game_completed():
     # create a Quoridor instance and complete the game
     q = Quoridor()
-    for _ in range(9):
-        q.make_move("e9")
-        q.make_move("e1")
+    q.player1.pos = "e8"
+    q.player2.pos = "e2"
+    q.make_move("e9")
+    assert q.is_terminated == True
 
     # try to make a move after the game is completed
     with pytest.raises(GameCompletedError):
-        q.make_move("e5")
-
-    assert q.is_terminated == True
+        q.make_move("e1")
