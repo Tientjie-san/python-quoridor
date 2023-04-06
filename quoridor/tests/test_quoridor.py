@@ -1,103 +1,174 @@
-# import unittest
-# from quoridor.src.quoridor import *
-# from quoridor.src.exceptions import *
-
-# """
-# What to test: cases for pawn and fence moves moves, is_game_over
-# """
+from quoridor import Quoridor
+from quoridor.src.exceptions import *
+import pytest
 
 
-# class TestPawnMoves(unittest.TestCase):
-#     def setUp(self) -> None:
-#         self.game = Quoridor()
+def test_get_pgn():
+    # create a Quoridor instance and make some moves
+    q = Quoridor()
+    q.make_move("e2")
+    q.make_move("e8")
+    q.make_move("e3")
 
-#     def test_pawn_in_corner(self):
-#         self.game.current_player.pos = 0, 0
-#         legal_moves = {(1, 0), (0, 1)}
-#         self.assertEqual(legal_moves, self.game.legal_pawn_moves())
+    # get the PGN string representation
+    pgn = q.get_pgn()
 
-#     def test_pawn_on_edge(self):
-#         self.game.current_player.pos = 3, 0
-#         legal_moves = {(2, 0), (4, 0), (3, 1)}
-#         self.assertEqual(legal_moves, self.game.legal_pawn_moves())
-
-#     def test_fence_blocking_pawn_h(self):
-#         self.game.add_fence((4, 4, "H"))
-#         self.game.current_player.pos = 4, 4
-#         legal_moves = {(3, 4), (4, 3), (4, 5)}
-#         self.assertEqual(legal_moves, self.game.legal_pawn_moves())
-
-#     def test_fence_blocking_pawn_v(self):
-#         self.game.add_fence((4, 4, "V"))
-#         self.game.current_player.pos = 4, 4
-#         legal_moves = {(3, 4), (4, 3), (5, 4)}
-#         self.assertEqual(legal_moves, self.game.legal_pawn_moves())
-
-#     def test_pawn_facing_opponent(self):
-#         self.game.current_player.pos = 4, 4
-#         self.game.waiting_player.pos = 5, 4
-#         legal_moves = {(3, 4), (4, 3), (4, 5), (6, 4)}
-#         self.assertEqual(legal_moves, self.game.legal_pawn_moves())
-
-#     def test_pawn_facing_opponent_on_edge(self):
-#         self.game.current_player.pos = 5, 1
-#         self.game.waiting_player.pos = 5, 0
-#         legal_moves = {(4, 1), (6, 1), (5, 2), (4, 0), (6, 0)}
-#         self.assertEqual(legal_moves, self.game.legal_pawn_moves())
-
-#     def test_pawn_facing_opponent_with_wall_behind(self):
-#         self.game.add_fence((5, 4, "H"))
-#         self.game.current_player.pos = 4, 4
-#         self.game.waiting_player.pos = 5, 4
-#         legal_moves = {(3, 4), (4, 3), (4, 5), (5, 3), (5, 5)}
-#         self.assertEqual(legal_moves, self.game.legal_pawn_moves())
-
-#     def test_pawn_facing_opponent_with_wall_behind_and_right(self):
-#         self.game.add_fence((5, 4, "H"))
-#         self.game.add_fence((5, 4, "V"))
-#         self.game.current_player.pos = 4, 4
-#         self.game.waiting_player.pos = 5, 4
-#         legal_moves = {(3, 4), (4, 3), (5, 3)}
-#         self.assertEqual(legal_moves, self.game.legal_pawn_moves())
+    # check that the PGN string is correct
+    expected_pgn = "e2/e8/e3"
+    assert pgn == expected_pgn
 
 
-# class TestFenceMoves(unittest.TestCase):
-#     def setUp(self) -> None:
-#         self.game = Quoridor()
+def test_init_from_pgn():
+    # create a Quoridor instance with some initial moves
+    q = Quoridor()
+    q.make_move("e2")
+    q.make_move("e8")
 
-#     def test_illegal_fence_overlap(self):
-#         self.game.add_fence((4, 5, "H"))
-#         self.assertRaises(ValueError, self.game.add_fence, fence=(5, 5, "V"))
-#         self.assertRaises(ValueError, self.game.add_fence, fence=(4, 4, "H"))
-#         self.assertRaises(ValueError, self.game.add_fence, fence=(4, 6, "H"))
+    # convert the current game to PGN format
+    pgn = q.get_pgn()
 
-#         self.game.add_fence((3, 3, "V"))
-#         self.assertRaises(ValueError, self.game.add_fence, fence=(2, 3, "H"))
-#         self.assertRaises(ValueError, self.game.add_fence, fence=(2, 3, "V"))
-#         self.assertRaises(ValueError, self.game.add_fence, fence=(4, 3, "V"))
+    # initialize a new Quoridor instance from the PGN string
+    q2 = Quoridor.init_from_pgn(pgn)
 
-#     def test_illegal_fence_unreachable(self):
-#         self.game.add_fence((4, 0, "H"))
-#         self.game.add_fence((4, 2, "H"))
-#         self.game.add_fence((4, 4, "H"))
-#         self.game.add_fence((4, 6, "H"))
-#         self.game.add_fence((5, 7, "H"))
-#         self.assertRaises(ValueError, self.game.add_fence, fence=(5, 7, "V"))
+    # check that the new instance has the same state as the original one
+    assert q2.get_pgn() == pgn
+
+    # try initializing with an invalid PGN string
+    with pytest.raises(InvalidMoveError):
+        Quoridor.init_from_pgn("e2/invalid_move")
 
 
-# class TestEndGame(unittest.TestCase):
-#     def setUp(self) -> None:
-#         self.game = Quoridor()
+def test_create_board():
+    # create a Quoridor instance
+    q = Quoridor()
 
-#     def test_end_game_p1(self):
-#         self.game.current_player.pos = 8, 4
-#         self.assertTrue(self.game.is_game_over())
+    # get the board dictionary
+    board = q._create_board()
 
-#     def test_end_game_p2(self):
-#         self.game.switch_players()
-#         self.game.current_player.pos = 0, 4
-#         self.assertTrue(self.game.is_game_over())
+    # check that all cells have the expected number of connections
+    for cell in board:
+        connections = board[cell]
+        expected_connections = 4
+        if cell[0] in ("a", "i") or cell[1] in ("1", "9"):
+            expected_connections = 3
+        if cell[0] in ("a", "i") and cell[1] in ("1", "9"):
+            expected_connections = 2
+
+        assert len(connections) == expected_connections
+
+    # check that adjacent cells are connected to each other
+    assert "a1" in board["b1"]
+    assert "b1" in board["a1"]
+    assert "i9" in board["h9"]
+    assert "h9" in board["i9"]
+    assert "e5" in board["d5"]
+    assert "d5" in board["e5"]
+    assert "e5" in board["e4"]
+    assert "e4" in board["e5"]
 
 
-# if __name__ == "__main__":
-#     unittest.main()
+def test_get_legal_pawn_moves():
+    # create a Quoridor instance from pgn with normal circumstances
+    q = Quoridor.init_from_pgn("e2/e8/e3")
+
+    # get the legal moves for the current player's pawn
+    legal_moves = q.get_legal_pawn_moves()
+
+    # check that the legal moves are correct
+    expected_moves = {"e9", "e7", "d8", "f8"}
+    assert legal_moves == expected_moves
+
+    # check legal moves for in the situation when there is a
+    # jump posibble in normal circumstances so not on edge of board or wall
+
+    q = Quoridor.init_from_pgn("e2/e8/e3/e7/e4/e6/e5")
+    legal_moves = q.get_legal_pawn_moves()
+    expected_moves = {"e4", "e7", "d6", "f6"}
+    assert legal_moves == expected_moves
+
+    # check legal moves for in the situation when there is a wall behind or next to the player
+    q = Quoridor.init_from_pgn("e8h")
+    legal_moves = q.get_legal_pawn_moves()
+    expected_moves = {"f9", "d9"}
+    assert legal_moves == expected_moves
+
+    # check for legal moves when player can jump over player but wall is behind it
+    q = Quoridor.init_from_pgn("e2/e8/e3/e7/e4/e6/e5/e6h")
+    legal_moves = q.get_legal_pawn_moves()
+    expected_moves = {"d6", "f6", "d5", "f5", "e4"}
+    assert legal_moves == expected_moves
+
+
+def test_validate_wall_move():
+    q = Quoridor()
+    q.current_player.walls = 0
+
+    with pytest.raises(NoWallToPlaceError):
+        q._validate_wall_move("a2h")
+
+    # Test if the function raises IllegalWallPlacementError if the wall is out of bounds
+    q.current_player.walls = 10
+    with pytest.raises(IllegalWallPlacementError):
+        q._validate_wall_move("a9h")
+
+    # # Test if the function raises IllegalWallPlacementError if the wall overlaps with another wall
+    q.placed_walls.append("g6h")
+    with pytest.raises(IllegalWallPlacementError):
+        invalid_pgn = "e2/e8/a5h/c5h/e5h/g5h/h6v/h7h"
+        q = Quoridor.init_from_pgn("g6h/g6v")
+
+    # Test if the function raises IllegalWallPlacementError if the wall blocks the current player from reaching their goal
+    with pytest.raises(IllegalWallPlacementError):
+        invalid_pgn = "e2/e8/a5h/c5h/e5h/g5h/h6v/h7h"
+        q = Quoridor.init_from_pgn(invalid_pgn)
+
+    # Test if the function raises IllegalWallPlacementError if the wall blocks the opponent from reaching their goal
+    with pytest.raises(IllegalWallPlacementError):
+        invalid_pgn = "e2/e8/a5h/c5h/e5h/g5h/h6v/h7h"
+        q = Quoridor.init_from_pgn(invalid_pgn)
+
+    # Test if the function returns None if the wall move is legal
+    q = Quoridor()
+    assert q._validate_wall_move("a2h") == None
+
+
+def test_undo_move():
+    game = Quoridor()
+    initial_state = game.__dict__
+    try:
+        game.undo_move()
+    except NothingToUndoError:
+        pass
+    else:
+        assert False, "NothingToUndoError not raised for initial game state"
+
+    game.move("e2")
+    game_state_after_move = game.__dict__
+    game.undo_move()
+    assert (
+        game_state_after_move != game.__dict__
+    ), "Game state unchanged after undoing move"
+    assert (
+        game.__dict__ == initial_state
+    ), "Game state not reset after undoing all moves"
+
+    game.place_wall("e3h")
+    game_state_after_wall = game.__dict__
+    game.undo_move()
+    assert (
+        game_state_after_wall != game.__dict__
+    ), "Game state unchanged after undoing wall placement"
+
+
+def test_make_move_when_game_completed():
+    # create a Quoridor instance and complete the game
+    q = Quoridor()
+    for _ in range(9):
+        q.make_move("e9")
+        q.make_move("e1")
+
+    # try to make a move after the game is completed
+    with pytest.raises(GameCompletedError):
+        q.make_move("e5")
+
+    assert q.is_terminated == True
