@@ -163,6 +163,8 @@ class Quoridor:
             If the given PGN string is invalid.
         """
         quoridor = cls()
+        if pgn == "":
+            return quoridor
         moves = pgn.split("/")
         for move in moves:
             quoridor.make_move(move)
